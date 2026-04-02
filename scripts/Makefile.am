@@ -46,7 +46,6 @@ dist_sbin_SCRIPTS = airodump-ng-oui-update
 
 if LINUX
 dist_sbin_SCRIPTS += airmon-ng
-
 airmon-ng: airmon-ng.linux Makefile
 	cp "$(abs_srcdir)/airmon-ng.linux" "$(abs_builddir)/airmon-ng"
 	chmod +x "$(abs_builddir)/airmon-ng"
@@ -62,5 +61,13 @@ airmon-ng: airmon-ng.freebsd Makefile
 
 endif
 
-EXTRA_DIST = airmon-ng.freebsd airmon-ng.linux
+EXTRA_DIST = airmon-ng.freebsd airmon-ng.linux airmon-nx/airmon-nx.py airmon-nx/README.md
 CLEANFILES = airmon-ng
+
+install-exec-hook:
+if LINUX
+	$(INSTALL) -m 0755 "$(abs_srcdir)/airmon-nx/airmon-nx.py" "$(DESTDIR)$(sbindir)/airmon-nx"
+endif
+
+uninstall-hook:
+	rm -f "$(DESTDIR)$(sbindir)/airmon-nx"
