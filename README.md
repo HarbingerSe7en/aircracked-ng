@@ -1,131 +1,155 @@
-#Install instructions
+# Aircracked-ng
+
+A modified fork of [Aircrack-ng](https://github.com/aircrack-ng/aircrack-ng) with enhanced features for airodump-ng and aireplay-ng, plus **airmon-nx** — a modern Python replacement for airmon-ng.
 
 ```bash
-sudo apt-get update
-
-sudo apt-get install libtool m4 automake pkg-config
-
 git clone https://github.com/theweefies/aircracked-ng
-
 cd aircracked-ng
-
 autoreconf -i
-
 ./configure
-
 make
-
 make install
-
-sudo vim /etc/profile
-
-#add the following line to the end
-PATH=$PATH:/usr/local/lib
-
-reboot
-
-sudo ldconfig
 ```
 
-# Aircracked-ng changes
+After installation, add `/usr/local/lib` to your `PATH` in `/etc/profile`, reboot, and run `sudo ldconfig`.
 
-This version of the aircrack suite contains changes to aireplay-ng, airodump-ng:
+---
 
-airodump-ng:
+## What's New in Aircracked-ng
 
-- UPDATE 2025-03-05:
-    - STREAM PACKETS OVER TCP: -V / --tcp-server option to set up a bind tcp connection;
-    client can connect over tcp to listen address to receive file header and subsequent packets. Pass -V <ipv4>:<port> or -V <ipv4>,<port>. 
-- NEW FEATURES 
-    - ppi/radiotap creation:   Pass the -p/--ppi option with --gpsd (or not if using --coords) to create radiotap/ppi geo headers. Currently, the TSF Timer, frequency, RSSI, noise, and rate are being pulled from ri structure for radiotap data. Some of these may need to be modified or adjusted (specifically the rate) due to my misconceptions or misunderstanding of the existing code. The GPS information used for geotagging is the lat, lon, and altitude. May add speed as well.
-    - 802.11ax/6E support:     Pass the -X/--80211ax option to use standard 6E primary channel numbers with the -c option. Also added 'x' character to accepted bands with use of the --band option. Supports use of other bands, a, b, g by using freq mappings for other bands and using frequency scanning mode.
-    - Targeting mode:          Pass the -z/--target to use targeting mode. Option can accept single mac address or file of new-line separated MACs. Will highlight identified MAC in AP or STA display tables. 
-    - Fixed Coordinates:       Pass the -y/--coords option with coordinates in the format 35.121212,-75.232323 (floating point, signed, comma separated). These will be encoded into into the ppi geotag.
-    - src/airodump-ng/airodump-ng.c:
-      line:
-        - 60:          added <ctype.h> include (i think??)
-        - 130:         ax_all_chans array
-        - 143:         ax_chans array
-        - 151:         channel_frequency_map_bg
-        - 170:         channel_frequency_map_a
-        - 198:         channel_frequency_map_ax
-        - 263:         letoh24 - function to convert a 3 byte array to host order
-        - 277:         frequency #defines
-        - 280-433:     ppi header functions/vars/#defines
-        - 582:         4x lopt additions - int scan_11ax, int ppi, double coordinates[2], and int target
-        - 588-651:     targeting globals
-        - 1114:        modified usage table
-        - 1787:        Set some of the 802.11ax properties to zero for new ap_cur
-        - 2401-2475:   Ext. Tag and HE Operation parsing for AX
-        - 3507-3567:   PPI writing calls and logic for encoding optional fixed coords
-        - 4226-4231:   Target AP identification and marking
-        - 4546-4549:   Added text fg color default after marking AP target (if in target mode)
-        - 4641-4651:   Target STA identification and marking
-        - 4715-4717:   Added text fg color default after marking STA target (if in target mode)
-        - 4730-4732:   Added text fg color default at end of processing loop to ensure that text resets to ad default (if in target mode)
-        - 4740: TO DO: Maybe update Target NA Station identification and marking?
-        - 5747-5846:   Added functions dealing with converting channels to frequency strings
-        - 5848:        modified invalid_channel to account for ax channels
-        - 5924,5957:   modified getchannels to account for ax channels
-        - 6416:        updated freq array to hold 3x options (a, bg, ax)
-        - 6424:        added freq_string to hold updated frequencies
-        - 6492:        updated long_options array (4x) - 80211ax, ppi, coords, target
-        - 6583:        set new lopts to 0 (5x), lopt.scan_11ax, lopt.target, lopt.ppi, lopt.coordinates[0], lopt.coordinates[1]
-        - 6687:        updated short options string, fix to this was left a colon on end of X. Options   added: Xpzy:
-        - 6785:        added case 'X' for 802.11ax
-        - 6791:        modified case 'c' for ax parsing; should retain default behavior if -X is not passed
-        - 6860:        modified case 'b' for ax band use 
-        - 6912:        added case 'z' for target mac highlighting
-        - 6924:        added case 'y' for fixed coordinates option
-        - 7488:        added logic to ensure that gpsd option is passed with ppi option (Unless fixed coordinates option is in play; however, it may be desirable to just build the radiotap - this functionality already exists)
-        - 7544:        added argument ppi to dump_initialize_multi_format call
+### airodump-ng
 
-    - include/aircrack-ng/support/station.h:
-      line:
-        - 85: added ax_channel_info structure. This definitely needs to be more robust, but it serves its purpose.
-        - 122: added ax_channel declaration
-        - 230: added marked and marked_color to ST_info
+**802.11ax / 6E Support** — Pass `-X` / `--80211ax` to use standard 6E primary channel numbers with `-c`. The `x` band character is accepted via `--band`, and frequency scanning mode is supported for cross-band operation (a, b, g bands via frequency mappings).
 
-    - include/aircrack-ng/support/communications.h:
-      line:
-        - 374: added ppi argument to dump_initialize_multi_format function signature
+**PPI / Radiotap Geotagging** — Pass `-p` / `--ppi` with `--gpsd` (or `--coords` for fixed coordinates) to generate radiotap/PPI geo headers on captured packets. Radiotap data includes TSF timer, frequency, RSSI, noise, and rate. GPS information (latitude, longitude, altitude) is encoded into PPI geotags.
 
-    - lib/libac/support/communications.c:
-      line:
-        - 959: added ppi argument to dump_initialize_multi_format
-        - 1139: added logic test for ppi, so that if we are writing a file with ppi headers we change the linktype in the global header
-        - 1207: added a zero value 3rd argument (ppi) to the return call for dump_initialize, since airodump doesn't use the dump_initialize call, and other programs in the suite might (did a in-file grep and don't see any specific issues this might cause)
+**Fixed Coordinates** — Pass `-y` / `--coords` with coordinates in signed, comma-separated floating-point format (e.g., `35.121212,-75.232323`) to embed static GPS data into PPI geotags without requiring gpsd.
 
-    - FIXES - 18 MAR 2024:
-      - 588-651:    - changed MAC address/targeting-related function signatures to static
-      - 624-641:    - Modified parseMACAddressFile to ensure that improperly formatted lines (specifically lines longer than a mac address) are treated in such a manner that the additional characters are read and ignored until a new line character is reached (or end of file). This ensures the next line is read at the start. Additionally, the array size of MAX_TARGETS is protected.
-      - 1787:       - Set some of the 802.11ax properties to zero for new ap_cur
-      - 2401-2475:  - Added more boundary checking through Ext tag (HE Operation) parsing. also added    letoh24 to ensure endianness for different architectures (This includes compiler ifdef block that will add code if big endian to swap bytes, otherwise no swap). This should still be tested on big-endian systems. The arithmetic changes for determining the 6GHz Operation Information presence should be sound. Additionally, a switch and case statement was employed and proper channel width determination was employed based on the 802.11ax-2021 standard. I did not turn this into a function as you originally mentioned in your email - this would be a departure from the way that every other tag is processed in this portion of the code - i can easily make the change, but i wanted confirmation that is what you actually want before doing it.
-      - 5747-5846:  - Added static declaration for channel/frequency mapping functions. Fixed channel_to_frequency_ax: get first and last channel from channel_frequency map and perform boundary check against channel argument. The other functions that perform channel_to_freq_string operations have an inherent boundary check in the inner 'for' loop (loop until -1, which is the end element of each of these arrays). Fixed channels_to_freq_string_ax to respect the boundaries of freq_string and avoid writing beyond its allocated space. Additionally, modified channels_to_freq_string_a (and bg) to ensure that the boundary of freq_string is respected and protected against a buffer overflow.
-      - 6687:       - Added colon after option 'z' in short options string to indicate takes argument(oops).
+**Target Highlighting** — Pass `-z` / `--target` with a single MAC address or a file of newline-separated MACs to highlight matching entries in the AP and STA display tables.
 
-aireplay-ng:
-- UPDATED 
-    - Deauthentication:   Reason code default is now set to reason code 1. Deauthentication frames specified in the count are true to the count, except in instances where the interface is shared with airodump.
-                                When a second card/interface is used for airodump or the interface is not shared, the number of frames transmitted is accurate to the count, both for broadcast and directed deauths.
-- NEW FEATURE 
-    - Probe Requests: A new option (-P / --probe) has been added to the aireplay-ng binary. This option takes a positive integer for the count, similar to the deauth option. You can pass an
-                                essid or bssid to send directed probe requests, or nothing to send probe requests and elicit responses from any surrounding APs. Of note: this script first conducts a
-                                hearability check by sending a broadcast probe at intervals until a reponse is received to confirm that AP(s) are present, and then sends the number of directed probes    
-                                specified by the count. The same note above about interface sharing remains true for sending probes as well.
-    - src/aireplay-ng/aireplay-ng:
-      line:
-        - 183: changed default rc to 1 in usage print statement
-        - 197: added -P/--probe option to send a probe request and listen for a response; purpose is to solicit make/model information in response.
-        - 447-531: removed for loop with hard-coded 64 count deauth. now sends only the count that the user specifies
-        - 5060: added do_probe function to send probes
-        - 6380: updated opt.deauth_rc default to 1. This is operationally the most effective rc.
-        - 6411: updated long_options for --probe option
-        - 6424: update short options string
-        - 6869: added 'P' case statement
-        - 7180: added case return statement for 'P'
+**TCP Packet Streaming** *(2025-03-05)* — Pass `-V` / `--tcp-server` with `<ipv4>:<port>` or `<ipv4>,<port>` to set up a TCP listener that streams the pcap file header and subsequent packets to any connecting client.
 
-# Aircrack-ng
+**802.11ax Channel Width and Segmentation** — New options for fine-grained 802.11ax channel width control: `--ax40`, `--ax80`, `--ax80+`, and `--ax160` set the capture bandwidth to 40, 80, 80+80, or 160 MHz respectively. Two companion options, `--cseg0 <freq>` and `--cseg1 <freq>`, specify center segment frequencies — `--cseg0` for the secondary center frequency on 40/80/160 MHz channels, and `--cseg1` for the second segment on 80+80 MHz configurations. These work alongside the existing HT20/HT40 options and the `-X` flag for 6E channel selection.
+
+**Bug fixes (March 2024):**
+- Hardened MAC address parsing and target file reading against malformed input and buffer overflows
+- Added boundary checking to HE Operation (802.11ax) tag parsing with proper endianness handling via `letoh24`
+- Fixed channel-to-frequency conversion functions to respect allocated buffer sizes and prevent overflows
+- Corrected short options string (missing colons for arguments)
+
+### aireplay-ng
+
+**Improved Deauthentication** — The default reason code is now set to 1 (operationally the most effective). Deauthentication frame counts are now accurate to the user-specified count; the previous hard-coded 64-frame loop has been removed. When the interface is not shared with airodump, transmitted frame counts match the count exactly for both broadcast and directed deauths.
+
+**Probe Requests** — A new `-P` / `--probe` option sends directed or broadcast probe requests to solicit AP responses (useful for identifying AP make/model information). The tool first performs a hearability check via broadcast probes, then sends the specified count of directed probes. Interface-sharing caveats apply as with deauthentication.
+
+---
+
+## airmon-nx
+
+**airmon-nx** is a modern, from-scratch Python replacement for `airmon-ng`. It provides full feature parity with the original shell script while adding targeted process management, persistent state tracking, driver-aware mode switching, and an interactive ncurses TUI. It uses only the Python standard library — no external packages required.
+
+### Why airmon-nx?
+
+The original `airmon-ng` is a ~1200-line shell script with a destructive approach to process management (`check kill` wipes every interfering process system-wide, even those bound to other interfaces). airmon-nx addresses this with:
+
+- **Targeted process killing** — stop only processes using the specific interface you're working with, leaving other adapters untouched.
+- **Persistent state** — monitor sessions are tracked in `/run/airmon-nx/*.json`, so `stop` reliably restores the correct interface state even after udev renames.
+- **Driver-aware mode switching** — known-broken drivers (Realtek 88XXau, Qualcomm qcacld/icnss, etc.) are detected upfront and routed to the correct codepath.
+- **Dynamic output formatting** — column widths adapt to actual data instead of breaking on long interface names or firmware strings.
+- **Interactive TUI** — live-updating ncurses interface with keyboard navigation, per-interface detail views, and inline monitor mode toggling.
+
+### Requirements
+
+**Python 3.6+** (stdlib only)
+
+Required system tools: `iw`, `ip` (from `iproute2`)
+
+Recommended for full functionality: `ethtool`, `lsusb` (usbutils), `lspci` (pciutils), `rfkill`, `modinfo` (kmod), `nmcli` (network-manager)
+
+```bash
+# Debian/Ubuntu
+sudo apt install iw iproute2 ethtool usbutils pciutils rfkill kmod
+
+# Arch
+sudo pacman -S iw iproute2 ethtool usbutils pciutils util-linux kmod
+```
+
+### Installation
+
+```bash
+sudo cp airmon-nx.py /usr/local/sbin/airmon-nx
+sudo chmod +x /usr/local/sbin/airmon-nx
+```
+
+Or run directly: `sudo python3 airmon-nx.py <command>`
+
+### Usage
+
+```bash
+# List wireless interfaces (add -v for verbose)
+sudo airmon-nx list
+
+# Enable monitor mode
+sudo airmon-nx start wlan0
+sudo airmon-nx start wlan0 6          # specific channel
+sudo airmon-nx start wlan0 5180       # specific frequency (MHz)
+
+# Disable monitor mode
+sudo airmon-nx stop wlan0mon
+
+# Check for interfering processes
+sudo airmon-nx check                  # all processes
+sudo airmon-nx check wlan0            # only processes on wlan0
+
+# Kill interfering processes
+sudo airmon-nx check --kill wlan0     # targeted: only wlan0 processes
+sudo airmon-nx check --kill-all       # global: all interfering processes
+
+# Interactive TUI
+sudo airmon-nx ui
+```
+
+### TUI Controls
+
+| Key | Action |
+|-----|--------|
+| `↑`/`↓` or `j`/`k` | Navigate interface list |
+| `Enter` | View interface details |
+| `m` | Toggle monitor mode |
+| `k` | Kill processes bound to interface |
+| `K` | Kill all interfering processes |
+| `r` | Refresh |
+| `q` | Quit |
+
+### Monitor Mode Strategies
+
+airmon-nx automatically selects the best strategy based on driver detection:
+
+| Strategy | When Used | Behavior |
+|----------|-----------|----------|
+| Virtual interface (vif) | mac80211 drivers (preferred) | Creates `wlan0mon` alongside base interface |
+| Direct type conversion | Realtek 88XXau and drivers without vif support | Converts interface in-place |
+| qcacld control | Qualcomm `icnss` driver | Writes to `/sys/module/wlan/parameters/con_mode` |
+
+### Comparison with airmon-ng
+
+| Feature | airmon-ng | airmon-nx |
+|---------|-----------|-----------|
+| Language | POSIX shell | Python 3 (stdlib) |
+| Process killing | Global only | Targeted per-interface + global |
+| State tracking | None | JSON in `/run/airmon-nx/` |
+| Column formatting | Hardcoded tabs | Dynamic widths |
+| Interactive UI | None | ncurses TUI |
+| rfkill handling | ✓ | ✓ + auto-unblock |
+| Driver quirks | ✓ | ✓ (all ported) |
+| Channel validation | ✓ | ✓ (with hardware capability check) |
+
+For full documentation, see the [airmon-nx README](airmon-nx-README.md).
+
+---
+
+## Aircrack-ng
 
 [![Alpine Linux Build Status](https://buildbot.aircrack-ng.org/badges/aircrack-ng-alpine.svg?left_text=Alpine%20Linux%20Build)](https://buildbot.aircrack-ng.org/)
 [![Kali Linux Build Status](https://buildbot.aircrack-ng.org/badges/aircrack-ng-kali.svg?left_text=Kali%20Linux%20Build)](https://buildbot.aircrack-ng.org/)
@@ -606,5 +630,3 @@ Documentation, tutorials, ... can be found on https://aircrack-ng.org
 Support is available in the [forum](https://forum.aircrack-ng.org) and on IRC (in #aircrack-ng on Libera Chat).
 
 Every tool has its own manpage. For aircrack-ng, `man aircrack-ng`
-
-# Infrastructure sponsors
